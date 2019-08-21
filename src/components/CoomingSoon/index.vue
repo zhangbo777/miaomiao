@@ -1,19 +1,23 @@
 <template>
     <div class="movie_body">
-        <ul>
-            <li v-for="item in comingList">
-            <div class="pic_show"><img :src="item.img | setWH('128.180')"></div>
-            <div class="info_list">
-                <h2>{{item.nm}}</h2>
-                <p><span class="person">{{item.wish}}</span> 人想看</p>
-                <p>主演: {{item.star}}</p>
-                <p>{{item.showInfo}}上映</p>
-            </div>
-            <div class="btn_pre">
-                预售
-            </div>
-        </li>
-        </ul>
+        <Loding v-if="isLoading"/>
+        <Scroller v-else :handleToScroll="handleToScroll" :handleToTouchEnd="handleToTouchEnd">
+            <ul>
+                <li class="pull">{{pullDownMsg}}</li>
+                <li v-for="item in comingList">
+                <div class="pic_show"><img :src="item.img | setWH('128.180')"></div>
+                <div class="info_list">
+                    <h2>{{item.nm}}</h2>
+                    <p><span class="person">{{item.wish}}</span> 人想看</p>
+                    <p>主演: {{item.star}}</p>
+                    <p>{{item.showInfo}}上映</p>
+                </div>
+                <div class="btn_pre">
+                    预售
+                </div>
+            </li>
+            </ul>
+        </Scroller>
     </div>
 
 </template>
@@ -23,16 +27,48 @@
         name: "CoomingSoon",
         data(){
             return{
-                comingList:[]
+                comingList:[],
+                pullDownMsg:"",
+                isLoading:true,
+                prveCityId:-1,
             }
         },
-        mounted(){
-            this.axios.get('/api/movieComingList?cityId=10').then((res)=>{
+        activated(){
+             var cityId=this.$store.state.city.id;
+             if(this.prveCityId===cityId){return;}
+             this.isLoading=true;
+            this.axios.get('/api/movieComingList?cityId='+cityId).then((res)=>{
                 var msg=res.data.msg;
                 if(msg==="ok"){
+                    this.isLoading=false;
                     this.comingList=res.data.data.comingList;
+                    this.prveCityId=cityId;
                 }
             })
+        },
+        methods:{
+            handleToScroll(pos) {
+                if (pos.y > 30) {
+                    this.pullDownMsg = "正在更新中";
+                }
+            },
+            handleToTouchEnd(pos) {
+                if (pos.y > 30) {
+                    console.log(1)
+                    this.axios.get('/api/movieOnInfoList?cityId=11').then((res) => {
+                        var msg = res.data.msg;
+                        console.log(msg)
+                        if (msg === "ok") {
+                            this.pullDownMsg = "更新成功"
+                            setTimeout(() => {
+                                this.movieList = res.data.data.movieList;
+                                this.pullDownMsg = "";
+                            }, 1000)
+                        }
+                    })
+                }
+
+            }
         }
     }
 </script>
@@ -50,4 +86,5 @@
     .movie_body .info_list img{ width:50px; position: absolute; right:10px; top: 5px;}
     .movie_body .btn_mall , .movie_body .btn_pre{ width:47px; height:27px; line-height: 28px; text-align: center; background-color: #f03d37; color: #fff; border-radius: 4px; font-size: 12px; cursor: pointer;}
     .movie_body .btn_pre{ background-color: #3c9fe6;}
+    .movie_body .pull{margin:0;padding:0;border:none}
 </style>
